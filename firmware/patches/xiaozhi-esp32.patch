@@ -1,7 +1,16 @@
 diff --git a/main/application.cc b/main/application.cc
-index d69d43d..3b6f07e 100644
+index d69d43d..5c76828 100644
 --- a/main/application.cc
 +++ b/main/application.cc
+@@ -328,7 +328,7 @@ void Application::ActivationTask() {
+     CheckAssetsVersion();
+ 
+     // Check for new firmware version
+-    CheckNewVersion();
++    // CheckNewVersion();
+ 
+     // Initialize the protocol
+     InitializeProtocol();
 @@ -610,33 +610,36 @@ void Application::InitializeProtocol() {
  }
  
