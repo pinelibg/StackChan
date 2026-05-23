@@ -237,7 +237,8 @@ private:
     static constexpr int kPowerSaveSleepDelaySeconds = 300;
     static constexpr int kPowerStatePollIntervalMs   = 1000;
 
-    i2c_master_bus_handle_t i2c_bus_;
+    i2c_master_bus_handle_t i2c_bus_        = nullptr;
+    i2c_master_bus_handle_t port_a_i2c_bus_ = nullptr;
     Pmic* pmic_;
     Aw9523* aw9523_;
     Ft6336* ft6336_;
@@ -323,6 +324,24 @@ private:
                 },
         };
         ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_));
+    }
+
+    void InitializePortAI2c()
+    {
+        i2c_master_bus_config_t i2c_bus_cfg = {
+            .i2c_port          = (i2c_port_t)0,
+            .sda_io_num        = GPIO_NUM_2,
+            .scl_io_num        = GPIO_NUM_1,
+            .clk_source        = I2C_CLK_SRC_DEFAULT,
+            .glitch_ignore_cnt = 7,
+            .intr_priority     = 0,
+            .trans_queue_depth = 0,
+            .flags =
+                {
+                    .enable_internal_pullup = 1,
+                },
+        };
+        ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &port_a_i2c_bus_));
     }
 
     void I2cDetect()
@@ -494,6 +513,7 @@ public:
     M5StackCoreS3Board()
     {
         InitializeI2c();
+        InitializePortAI2c();
         InitializeAxp2101();
         InitializePowerSaveTimer();
         InitializeAw9523();
@@ -556,6 +576,11 @@ public:
     {
         return i2c_bus_;
     }
+
+    i2c_master_bus_handle_t GetPortAI2cBus()
+    {
+        return port_a_i2c_bus_;
+    }
 };
 
 DECLARE_BOARD(M5StackCoreS3Board);
@@ -564,6 +589,12 @@ i2c_master_bus_handle_t hal_bridge::board_get_i2c_bus()
 {
     auto& board = (M5StackCoreS3Board&)Board::GetInstance();
     return board.GetI2cBus();
+}
+
+i2c_master_bus_handle_t hal_bridge::board_get_port_a_i2c_bus()
+{
+    auto& board = (M5StackCoreS3Board&)Board::GetInstance();
+    return board.GetPortAI2cBus();
 }
 
 StackChanCamera* hal_bridge::board_get_camera()

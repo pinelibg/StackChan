@@ -53,6 +53,7 @@ XiaozhiConfig_t get_xiaozhi_config();
 void set_xiaozhi_config(const XiaozhiConfig_t& config);
 
 i2c_master_bus_handle_t board_get_i2c_bus();
+i2c_master_bus_handle_t board_get_port_a_i2c_bus();
 StackChanCamera* board_get_camera();
 int board_get_battery_level();
 bool board_is_battery_charging();
