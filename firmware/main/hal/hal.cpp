@@ -38,6 +38,7 @@ void Hal::init()
     io_expander_init();
     rtc_init();
     imu_init();
+    scd41_init();
     servo_init();
     lvgl_init();
 }
