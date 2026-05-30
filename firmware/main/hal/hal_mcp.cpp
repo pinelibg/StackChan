@@ -8,14 +8,29 @@
 #include <mcp_server.h>
 #include <stackchan/stackchan.h>
 #include <apps/common/common.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 using namespace stackchan;
 
 static const std::string_view _tag = "HAL-MCP";
 
+static Hal::Scd41Data _mcp_scd41_cache;
+static SemaphoreHandle_t _scd41_cache_mutex = nullptr;
+
 void Hal::xiaozhi_mcp_init()
 {
     mclog::tagInfo(_tag, "init");
+
+    _scd41_cache_mutex = xSemaphoreCreateMutex();
+
+    onScd41Measurement.connect([](const Scd41Data& data) {
+        if (_scd41_cache_mutex) {
+            xSemaphoreTake(_scd41_cache_mutex, portMAX_DELAY);
+            _mcp_scd41_cache = data;
+            xSemaphoreGive(_scd41_cache_mutex);
+        }
+    });
 
     // https://github.com/78/xiaozhi-esp32/blob/main/docs/mcp-usage.md
     auto& mcp_server = McpServer::GetInstance();
@@ -146,4 +161,33 @@ void Hal::xiaozhi_mcp_init()
                            tools::stop_reminder(id);
                            return true;
                        });
+
+    mclog::tagInfo(_tag, "add robot.get_co2_data tool");
+    mcp_server.AddTool(
+        "self.robot.get_co2_data",
+        "Returns current air quality data from the SCD41 CO2 sensor. "
+        "co2_ppm: CO2 concentration in parts per million (400-2000 typical indoor range, >1000 suggests ventilation needed). "
+        "temperature_c: ambient temperature in Celsius. "
+        "humidity_percent: relative humidity 0-100%. "
+        "Returns an error field if the sensor is not connected.",
+        std::vector<Property>{},
+        [](const PropertyList& properties) -> ReturnValue {
+            Hal::Scd41Data snapshot;
+            if (_scd41_cache_mutex) {
+                xSemaphoreTake(_scd41_cache_mutex, portMAX_DELAY);
+                snapshot = _mcp_scd41_cache;
+                xSemaphoreGive(_scd41_cache_mutex);
+            }
+
+            if (snapshot.co2_ppm == 0) {
+                mclog::tagInfo(_tag, "get_co2_data: sensor not available");
+                return std::string(R"({"error": "SCD41 not available"})");
+            }
+
+            auto result = fmt::format(
+                R"({{"co2_ppm": {}, "temperature_c": {:.1f}, "humidity_percent": {:.1f}}})",
+                snapshot.co2_ppm, snapshot.temperature_c, snapshot.humidity_percent);
+            mclog::tagInfo(_tag, "get_co2_data: {}", result);
+            return result;
+        });
 }
