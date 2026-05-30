@@ -6,7 +6,6 @@
 #include "app_scd41.h"
 #include <apps/common/common.h>
 #include <fmt/format.h>
-#include <hal/board/hal_bridge.h>
 #include <hal/hal.h>
 #include <mooncake_log.h>
 
@@ -34,11 +33,11 @@ int32_t co2MeterWidth(uint16_t ppm)
     }
     return 12 + ((ppm - 400) * 212 / 1600);
 }
-} // namespace
+}  // namespace
 
 AppScd41::AppScd41()
 {
-    setAppInfo().name = "CO2";
+    setAppInfo().name           = "CO2";
     static uint32_t theme_color = 0x2FB8A0;
     setAppInfo().userData       = (void*)&theme_color;
 }
@@ -60,41 +59,17 @@ void AppScd41::onOpen()
         view::create_status_bar(0x74D8C8, 0x083B35);
     }
 
-    _sensor = std::make_unique<SCD41>(hal_bridge::board_get_port_a_i2c_bus());
-    esp_err_t err = _sensor->begin();
-    _sensor_ready = err == ESP_OK;
-    _last_read_tick = GetHAL().millis();
+    _scd41_conn_id = GetHAL().onScd41Measurement.connect([this](const Hal::Scd41Data& data) {
+        LvglLockGuard lock;
+        updateMeasurement(data);
+    });
 
     LvglLockGuard lock;
-    if (_sensor_ready) {
-        updateStatus("Waiting for first measurement...");
-    } else {
-        updateStatus(fmt::format("Sensor error: {}", esp_err_to_name(err)));
-    }
+    updateStatus("Waiting for first measurement...");
 }
 
 void AppScd41::onRunning()
 {
-    if (_sensor_ready && GetHAL().millis() - _last_read_tick >= 5000) {
-        _last_read_tick = GetHAL().millis();
-
-        bool ready = false;
-        esp_err_t err = _sensor->dataReady(ready);
-        if (err == ESP_OK && ready) {
-            SCD41Measurement measurement;
-            err = _sensor->readMeasurement(measurement);
-            LvglLockGuard lock;
-            if (err == ESP_OK) {
-                updateMeasurement(measurement);
-            } else {
-                updateStatus(fmt::format("Read error: {}", esp_err_to_name(err)));
-            }
-        } else if (err != ESP_OK) {
-            LvglLockGuard lock;
-            updateStatus(fmt::format("I2C error: {}", esp_err_to_name(err)));
-        }
-    }
-
     LvglLockGuard lock;
     view::update_home_indicator();
     view::update_status_bar();
@@ -104,9 +79,8 @@ void AppScd41::onClose()
 {
     mclog::tagInfo(getAppInfo().name, "on close");
 
-    if (_sensor) {
-        _sensor->stopPeriodicMeasurement();
-    }
+    GetHAL().onScd41Measurement.disconnect(_scd41_conn_id);
+    _scd41_conn_id = -1;
 
     LvglLockGuard lock;
     _title.reset();
@@ -128,11 +102,8 @@ void AppScd41::onClose()
     _humidity_card.reset();
     _status_label.reset();
     _panel.reset();
-    _sensor.reset();
-    _sensor_ready = false;
-    _last_read_tick = 0;
     _update_count = 0;
-    _pulse_on = false;
+    _pulse_on     = false;
 
     view::destroy_home_indicator();
     view::destroy_status_bar();
@@ -293,19 +264,19 @@ void AppScd41::updateStatus(const std::string& status)
     }
 }
 
-void AppScd41::updateMeasurement(const SCD41Measurement& measurement)
+void AppScd41::updateMeasurement(const Hal::Scd41Data& data)
 {
     _update_count++;
     _pulse_on = !_pulse_on;
 
-    const uint32_t color = co2Color(measurement.co2_ppm);
-    _co2_label->setText(fmt::format("{}", measurement.co2_ppm));
+    const uint32_t color = co2Color(data.co2_ppm);
+    _co2_label->setText(fmt::format("{}", data.co2_ppm));
     _co2_label->setTextColor(lv_color_hex(color));
-    _co2_meter_fill->setWidth(co2MeterWidth(measurement.co2_ppm));
+    _co2_meter_fill->setWidth(co2MeterWidth(data.co2_ppm));
     _co2_meter_fill->setBgColor(lv_color_hex(color));
     _pulse_dot->setBgColor(lv_color_hex(_pulse_on ? color : 0x38BDF8));
     _update_label->setText(fmt::format("#{}", _update_count));
-    _temp_label->setText(fmt::format("{:.1f} C", measurement.temperature_c));
-    _humidity_label->setText(fmt::format("{:.1f} %", measurement.humidity_percent));
+    _temp_label->setText(fmt::format("{:.1f} C", data.temperature_c));
+    _humidity_label->setText(fmt::format("{:.1f} %", data.humidity_percent));
     updateStatus(fmt::format("Live data {}s", GetHAL().millis() / 1000));
 }
