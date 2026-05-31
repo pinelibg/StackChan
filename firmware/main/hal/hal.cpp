@@ -38,7 +38,9 @@ void Hal::init()
     io_expander_init();
     rtc_init();
     imu_init();
+#if CONFIG_HAL_SCD41_ENABLED
     scd41_init();
+#endif
     servo_init();
     lvgl_init();
 }

@@ -34,7 +34,9 @@ extern "C" void app_main(void)
     GetMooncake().installApp(std::make_unique<AppAppCenter>());
     GetMooncake().installApp(std::make_unique<AppEzdata>());
     GetMooncake().installApp(std::make_unique<AppDance>());
+#if CONFIG_HAL_SCD41_ENABLED
     GetMooncake().installApp(std::make_unique<AppScd41>());
+#endif
     GetMooncake().installApp(std::make_unique<AppSetup>());
 
     // Main loop

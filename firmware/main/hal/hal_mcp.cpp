@@ -8,20 +8,25 @@
 #include <mcp_server.h>
 #include <stackchan/stackchan.h>
 #include <apps/common/common.h>
+#if CONFIG_HAL_SCD41_ENABLED
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#endif
 
 using namespace stackchan;
 
 static const std::string_view _tag = "HAL-MCP";
 
+#if CONFIG_HAL_SCD41_ENABLED
 static Hal::Scd41Data _mcp_scd41_cache;
 static SemaphoreHandle_t _scd41_cache_mutex = nullptr;
+#endif
 
 void Hal::xiaozhi_mcp_init()
 {
     mclog::tagInfo(_tag, "init");
 
+#if CONFIG_HAL_SCD41_ENABLED
     _scd41_cache_mutex = xSemaphoreCreateMutex();
 
     onScd41Measurement.connect([](const Scd41Data& data) {
@@ -31,6 +36,7 @@ void Hal::xiaozhi_mcp_init()
             xSemaphoreGive(_scd41_cache_mutex);
         }
     });
+#endif
 
     // https://github.com/78/xiaozhi-esp32/blob/main/docs/mcp-usage.md
     auto& mcp_server = McpServer::GetInstance();
@@ -162,6 +168,7 @@ void Hal::xiaozhi_mcp_init()
                            return true;
                        });
 
+#if CONFIG_HAL_SCD41_ENABLED
     mclog::tagInfo(_tag, "add robot.get_co2_data tool");
     mcp_server.AddTool(
         "self.robot.get_co2_data",
@@ -190,4 +197,5 @@ void Hal::xiaozhi_mcp_init()
             mclog::tagInfo(_tag, "get_co2_data: {}", result);
             return result;
         });
+#endif // CONFIG_HAL_SCD41_ENABLED
 }

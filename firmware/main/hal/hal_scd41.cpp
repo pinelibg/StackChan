@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include "hal.h"
+#if CONFIG_HAL_SCD41_ENABLED
 #include "board/hal_bridge.h"
 #include "drivers/scd41/scd41.h"
 #include <mooncake_log.h>
@@ -63,3 +64,5 @@ void Hal::scd41_init()
 
     xTaskCreatePinnedToCoreWithCaps(_scd41_task, "scd41", 4096, NULL, 2, NULL, 1, MALLOC_CAP_SPIRAM);
 }
+
+#endif // CONFIG_HAL_SCD41_ENABLED

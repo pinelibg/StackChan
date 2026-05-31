@@ -991,3 +991,16 @@ menu "BLE prph Configuration"
             Use this option to enable resolving peer's address.
 
 endmenu
+
+menu "External Sensors"
+
+    config HAL_SCD41_ENABLED
+        bool "Enable SCD41 CO2 sensor (PORT.A)"
+        default y
+        help
+            Enable support for the Sensirion SCD41 CO2/temperature/humidity sensor
+            connected to the PORT.A I2C bus. When enabled, the HAL initializes the
+            sensor at boot and exposes readings via the onScd41Measurement signal
+            and the self.robot.get_co2_data MCP tool.
+
+endmenu

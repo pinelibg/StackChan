@@ -256,12 +256,14 @@ public:
     uitk::Signal<ImuMotionEvent> onImuMotionEvent;
 
     /* ---------------------------------- SCD41 --------------------------------- */
+#if CONFIG_HAL_SCD41_ENABLED
     struct Scd41Data {
         uint16_t co2_ppm        = 0;
         float temperature_c     = 0.0f;
         float humidity_percent  = 0.0f;
     };
     uitk::Signal<Scd41Data> onScd41Measurement;
+#endif
 
     /* ---------------------------------- Time ---------------------------------- */
     void syncRtcTimeToSystem();
@@ -320,7 +322,9 @@ private:
     void io_expander_init();
     void imu_init();
     void rtc_init();
+#if CONFIG_HAL_SCD41_ENABLED
     void scd41_init();
+#endif
 };
 
 Hal& GetHAL();
