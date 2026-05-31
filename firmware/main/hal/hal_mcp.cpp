@@ -173,6 +173,7 @@ void Hal::xiaozhi_mcp_init()
     mcp_server.AddTool(
         "self.robot.get_co2_data",
         "Returns current air quality data from the SCD41 CO2 sensor. "
+        "Call this tool when asked about air, ventilation, temperature, humidity, or CO2, then answer concisely based on the result. "
         "co2_ppm: CO2 concentration in parts per million (400-2000 typical indoor range, >1000 suggests ventilation needed). "
         "temperature_c: ambient temperature in Celsius. "
         "humidity_percent: relative humidity 0-100%. "
