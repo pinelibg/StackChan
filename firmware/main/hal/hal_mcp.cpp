@@ -8,7 +8,7 @@
 #include <mcp_server.h>
 #include <stackchan/stackchan.h>
 #include <apps/common/common.h>
-#if CONFIG_HAL_SCD41_ENABLED
+#if CONFIG_HAL_SCD41_ENABLED || CONFIG_HAL_ENVIII_ENABLED
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #endif
@@ -20,6 +20,11 @@ static const std::string_view _tag = "HAL-MCP";
 #if CONFIG_HAL_SCD41_ENABLED
 static Hal::Scd41Data _mcp_scd41_cache;
 static SemaphoreHandle_t _scd41_cache_mutex = nullptr;
+#endif
+
+#if CONFIG_HAL_ENVIII_ENABLED
+static Hal::EnvIIIData _mcp_enviii_cache;
+static SemaphoreHandle_t _enviii_cache_mutex = nullptr;
 #endif
 
 void Hal::xiaozhi_mcp_init()
@@ -34,6 +39,18 @@ void Hal::xiaozhi_mcp_init()
             xSemaphoreTake(_scd41_cache_mutex, portMAX_DELAY);
             _mcp_scd41_cache = data;
             xSemaphoreGive(_scd41_cache_mutex);
+        }
+    });
+#endif
+
+#if CONFIG_HAL_ENVIII_ENABLED
+    _enviii_cache_mutex = xSemaphoreCreateMutex();
+
+    onEnvIIIMeasurement.connect([](const EnvIIIData& data) {
+        if (_enviii_cache_mutex) {
+            xSemaphoreTake(_enviii_cache_mutex, portMAX_DELAY);
+            _mcp_enviii_cache = data;
+            xSemaphoreGive(_enviii_cache_mutex);
         }
     });
 #endif
@@ -199,4 +216,37 @@ void Hal::xiaozhi_mcp_init()
             return result;
         });
 #endif // CONFIG_HAL_SCD41_ENABLED
+
+#if CONFIG_HAL_ENVIII_ENABLED
+    mclog::tagInfo(_tag, "add robot.get_environment_data tool");
+    mcp_server.AddTool(
+        "self.robot.get_environment_data",
+        "Returns current environment data from the M5Stack ENV III sensor on PORT.A. "
+        "Call this tool when asked about room temperature, humidity, atmospheric pressure, or altitude. "
+        "temperature_c: ambient temperature in Celsius. "
+        "humidity_percent: relative humidity 0-100%. "
+        "pressure_hpa: atmospheric pressure in hectopascals. "
+        "altitude_m: estimated altitude in meters from pressure. "
+        "Returns an error field if the sensor is not connected.",
+        std::vector<Property>{},
+        [](const PropertyList& properties) -> ReturnValue {
+            Hal::EnvIIIData snapshot;
+            if (_enviii_cache_mutex) {
+                xSemaphoreTake(_enviii_cache_mutex, portMAX_DELAY);
+                snapshot = _mcp_enviii_cache;
+                xSemaphoreGive(_enviii_cache_mutex);
+            }
+
+            if (snapshot.pressure_hpa <= 0.0f) {
+                mclog::tagInfo(_tag, "get_environment_data: sensor not available");
+                return std::string(R"({"error": "ENV III not available"})");
+            }
+
+            auto result = fmt::format(
+                R"({{"temperature_c": {:.1f}, "humidity_percent": {:.1f}, "pressure_hpa": {:.1f}, "altitude_m": {:.1f}}})",
+                snapshot.temperature_c, snapshot.humidity_percent, snapshot.pressure_hpa, snapshot.altitude_m);
+            mclog::tagInfo(_tag, "get_environment_data: {}", result);
+            return result;
+        });
+#endif // CONFIG_HAL_ENVIII_ENABLED
 }

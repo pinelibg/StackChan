@@ -1003,4 +1003,13 @@ menu "External Sensors"
             sensor at boot and exposes readings via the onScd41Measurement signal
             and the self.robot.get_co2_data MCP tool.
 
+    config HAL_ENVIII_ENABLED
+        bool "Enable ENV III sensor (PORT.A)"
+        default y
+        help
+            Enable support for the M5Stack ENV III temperature/humidity/pressure
+            sensor connected to the PORT.A I2C bus. When enabled, the HAL initializes
+            the sensor at boot and exposes readings via the onEnvIIIMeasurement signal,
+            the ENV III app, and the self.robot.get_environment_data MCP tool.
+
 endmenu

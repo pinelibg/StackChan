@@ -15,3 +15,6 @@
 #if CONFIG_HAL_SCD41_ENABLED
 #include "app_scd41/app_scd41.h"
 #endif
+#if CONFIG_HAL_ENVIII_ENABLED
+#include "app_enviii/app_enviii.h"
+#endif

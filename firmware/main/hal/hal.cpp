@@ -41,6 +41,9 @@ void Hal::init()
 #if CONFIG_HAL_SCD41_ENABLED
     scd41_init();
 #endif
+#if CONFIG_HAL_ENVIII_ENABLED
+    enviii_init();
+#endif
     servo_init();
     lvgl_init();
 }

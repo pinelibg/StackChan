@@ -265,6 +265,18 @@ public:
     uitk::Signal<Scd41Data> onScd41Measurement;
 #endif
 
+    /* --------------------------------- ENV III -------------------------------- */
+#if CONFIG_HAL_ENVIII_ENABLED
+    struct EnvIIIData {
+        float temperature_c     = 0.0f;
+        float humidity_percent  = 0.0f;
+        float pressure_hpa      = 0.0f;
+        float pressure_pa       = 0.0f;
+        float altitude_m        = 0.0f;
+    };
+    uitk::Signal<EnvIIIData> onEnvIIIMeasurement;
+#endif
+
     /* ---------------------------------- Time ---------------------------------- */
     void syncRtcTimeToSystem();
     void syncSystemTimeToRtc();
@@ -324,6 +336,9 @@ private:
     void rtc_init();
 #if CONFIG_HAL_SCD41_ENABLED
     void scd41_init();
+#endif
+#if CONFIG_HAL_ENVIII_ENABLED
+    void enviii_init();
 #endif
 };
 
