@@ -161,6 +161,12 @@ esp_err_t EnvIII::readQmp6988(float& pressure_pa, float& temperature_c)
         return err;
     }
 
+    const bool all_zero = data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 0 && data[4] == 0 && data[5] == 0;
+    if (all_zero) {
+        mclog::tagWarn(_tag, "QMP6988 returned all-zero sample, skipping");
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+
     const uint32_t p_read = (static_cast<uint32_t>(data[0]) << 16) | (static_cast<uint32_t>(data[1]) << 8) | data[2];
     const uint32_t t_read = (static_cast<uint32_t>(data[3]) << 16) | (static_cast<uint32_t>(data[4]) << 8) | data[5];
     const int32_t p_raw = static_cast<int32_t>(p_read) - QMP6988_SUBTRACTOR;
